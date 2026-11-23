@@ -1,0 +1,836 @@
+<title>Seringue sans cavitation</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Mise en page : bandeau réponse, puis schéma (collant, à gauche) | commandes + courbes (à droite), puis paramètres et calcul. */
+:root{
+  --bg:#EEF3F6; --surface:#FFFFFF; --ink:#0E1C27; --ink2:#4B5E6D; --line:#D3DDE4;
+  --accent:#0B7285; --on-accent:#FFFFFF; --liquid:#BDE5EC;
+  --ok:#1B7F4B; --warn:#8F5F00; --crit:#B42318; --on-status:#FFFFFF;
+  --zone:rgba(180,35,24,.08);
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0B131A; --surface:#121D26; --ink:#E7EFF4; --ink2:#9CB0BF; --line:#25353F;
+    --accent:#52C4D8; --on-accent:#05222A; --liquid:#1C5566;
+    --ok:#52C98E; --warn:#E3B341; --crit:#FF8B78; --on-status:#0B1319;
+    --zone:rgba(255,139,120,.10); color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0B131A; --surface:#121D26; --ink:#E7EFF4; --ink2:#9CB0BF; --line:#25353F;
+  --accent:#52C4D8; --on-accent:#05222A; --liquid:#1C5566;
+  --ok:#52C98E; --warn:#E3B341; --crit:#FF8B78; --on-status:#0B1319;
+  --zone:rgba(255,139,120,.10); color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:15px; line-height:1.5;
+  padding-block:20px 48px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.wrap{max-width:1120px;margin:0 auto;display:grid;gap:16px}
+h1,h2,h3{margin:0;font-weight:600;letter-spacing:-.01em;text-wrap:balance}
+h1{font-size:clamp(24px,5vw,32px);line-height:1.15}
+h2{font-size:16px}
+p{margin:0}
+sub{font-size:.75em;line-height:0;position:relative;vertical-align:baseline;top:.25em}
+.eyebrow{font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.lede{color:var(--ink2);max-width:62ch;margin-top:6px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px}
+.card>h2{margin-bottom:12px}
+
+.answer{display:flex;flex-wrap:wrap;gap:14px 36px;align-items:flex-end;justify-content:space-between}
+.answer .lab{font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.big{font-size:clamp(36px,8vw,54px);font-weight:600;line-height:1;letter-spacing:-.025em;font-variant-numeric:tabular-nums;margin-top:6px}
+.alt{font:13px/1.5 var(--mono);color:var(--ink2);margin-top:8px;overflow-wrap:anywhere}
+.facts{display:grid;gap:4px;font:13px/1.5 var(--mono);color:var(--ink2)}
+.facts b{color:var(--ink);font-weight:500}
+
+.grid{display:grid;gap:16px;grid-template-columns:minmax(0,1fr);grid-template-areas:"controls" "schematic" "charts"}
+@media (min-width:900px){
+  .grid{grid-template-columns:minmax(0,5fr) minmax(0,6fr);grid-template-areas:"schematic controls" "schematic charts"}
+  .schematic{position:sticky;top:16px}
+}
+.controls{grid-area:controls;display:grid;gap:14px;min-width:0}
+.schematic{grid-area:schematic;align-self:start;margin:0;min-width:0}
+.charts{grid-area:charts;display:grid;gap:18px;min-width:0}
+
+.qrow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.qrow label{font-weight:500}
+.qval{font:500 22px var(--mono);font-variant-numeric:tabular-nums}
+.qalt{font:12.5px var(--mono);color:var(--ink2);margin-top:2px}
+.slider{position:relative;padding-top:20px;margin-top:6px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:28px;background:transparent;margin:0;cursor:pointer;display:block}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:linear-gradient(to right,var(--accent) var(--pct,0%),var(--line) var(--pct,0%))}
+input[type=range]::-moz-range-track{height:4px;border-radius:2px;background:var(--line)}
+input[type=range]::-moz-range-progress{height:4px;border-radius:2px;background:var(--accent)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--accent);border:3px solid var(--surface);box-shadow:0 0 0 1px var(--accent);margin-top:-9px}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--accent);border:3px solid var(--surface);box-shadow:0 0 0 1px var(--accent)}
+input[type=range]:focus-visible{outline:2px solid var(--accent);outline-offset:4px;border-radius:4px}
+.qtick{position:absolute;top:0;transform:translateX(-50%);font:500 11px var(--mono);color:var(--ink2);text-align:center;pointer-events:none}
+.qtick::after{content:"";display:block;width:1px;height:10px;background:var(--ink2);margin:2px auto 0}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.btn{font:500 14px var(--sans);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 12px;cursor:pointer;min-height:40px}
+.btn:hover{border-color:var(--ink2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.status{display:flex;gap:12px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.status[data-state=ok]{background:color-mix(in srgb,var(--ok) 9%,var(--surface))}
+.status[data-state=limit]{background:color-mix(in srgb,var(--warn) 12%,var(--surface))}
+.status[data-state=cav]{background:color-mix(in srgb,var(--crit) 10%,var(--surface))}
+.ico{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:var(--on-status);background:var(--ok)}
+.status[data-state=limit] .ico{background:var(--warn)}
+.status[data-state=cav] .ico{background:var(--crit)}
+.status b{display:block;font-weight:600}
+.status span.d{display:block;color:var(--ink2);font-size:13.5px}
+
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.stat{border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-width:0}
+.stat .k{font-size:12.5px;color:var(--ink2)}
+.stat .v{font:500 17px var(--mono);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.stat.warn .v{color:var(--crit)}
+
+.chart{position:relative}
+.chart h3{font-size:14px;margin-bottom:2px}
+.chart .sub{font-size:13px;color:var(--ink2);margin-bottom:6px}
+.plot{position:relative}
+.plot svg{display:block;width:100%;height:auto;touch-action:pan-y}
+.gl{stroke:var(--line);stroke-width:1}
+.axis{stroke:var(--ink2);stroke-width:1}
+.tl{fill:var(--ink2);font:11px var(--mono)}
+.lab{fill:var(--ink2);font:11.5px var(--sans)}
+.ref{stroke:var(--ink2);stroke-width:1;stroke-dasharray:4 4}
+.line{fill:none;stroke:var(--accent);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.zone{fill:var(--zone)}
+.band{fill:var(--accent);opacity:.07}
+.mk{stroke:var(--surface);stroke-width:2;fill:var(--accent)}
+.mk.limit{fill:var(--warn)}
+.mk.cav{fill:var(--crit)}
+.xh{stroke:var(--ink2);stroke-width:1}
+.hd{fill:var(--accent);stroke:var(--surface);stroke-width:2}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);font:12px var(--mono);padding:5px 8px;border-radius:6px;white-space:nowrap;z-index:2}
+
+/* scène 3D */
+.stage{position:relative;width:100%;aspect-ratio:5/6;max-height:80vh;background:var(--bg);border:1px solid var(--line);border-radius:8px;overflow:hidden;touch-action:none}
+.stage canvas{display:block;width:100%;height:100%;cursor:grab;outline:none}
+.stage canvas:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.stage canvas:active{cursor:grabbing}
+figcaption{font-size:12.5px;color:var(--ink2);margin-top:8px}
+
+details.params summary{cursor:pointer;font-weight:600;font-size:16px;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px}
+details.params summary::-webkit-details-marker{display:none}
+details.params summary::after{content:"+";font:500 20px var(--mono);color:var(--ink2)}
+details.params[open] summary::after{content:"−"}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:14px}
+.fields label{display:grid;gap:4px;font-size:13px;color:var(--ink2);min-width:0}
+.fields input[type=number]{width:100%;font:15px var(--mono);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;min-height:40px}
+.fields input[aria-invalid=true]{border-color:var(--crit)}
+.fields .chk{display:flex;align-items:center;gap:8px;color:var(--ink);align-self:end;min-height:40px}
+.fields .chk input{width:18px;height:18px;accent-color:var(--accent)}
+.params .btns{margin-top:14px}
+
+.steps{list-style:none;counter-reset:s;margin:0;padding:0;display:grid;gap:18px}
+.steps li{counter-increment:s;display:grid;gap:6px;min-width:0}
+.steps h3{font-size:15px}
+.steps h3::before{content:counter(s) ". ";color:var(--accent);font-family:var(--mono)}
+.steps p{color:var(--ink2);font-size:14px}
+.eq{font:13.5px/1.75 var(--mono);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;overflow-x:auto;white-space:pre}
+.eq b{font-weight:500;color:var(--accent)}
+.final{font-weight:600}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Mécanique des fluides · Cavitation</div>
+    <h1>Seringue sans cavitation</h1>
+    <p class="lede">Un liquide médical est tiré dans une seringue à travers une aiguille fine. Plus on tire vite, plus la pression chute en (2). Déplace le curseur pour voir à partir de quel débit elle atteint la pression de vapeur.</p>
+  </header>
+
+  <section class="card answer" aria-label="Réponse">
+    <div>
+      <div class="lab">Débit maximal sans cavitation</div>
+      <div class="big" id="ans-big">—</div>
+      <div class="alt" id="ans-alt"></div>
+    </div>
+    <div class="facts" id="ans-facts"></div>
+  </section>
+
+  <div class="grid">
+    <section class="card controls" aria-label="Commandes">
+      <div>
+        <div class="qrow">
+          <label for="q">Débit de tirage Q</label>
+          <span class="qval" id="q-out">—</span>
+        </div>
+        <div class="qalt" id="q-alt"></div>
+        <div class="slider">
+          <span class="qtick" id="q-tick">Q<sub>max</sub></span>
+          <input type="range" id="q" min="0" max="150" step="0.1" value="60">
+        </div>
+      </div>
+      <div class="btns">
+        <button class="btn primary" id="btn-crit" type="button">Aller à Q<sub>max</sub></button>
+        <button class="btn" id="btn-half" type="button">Moitié de Q<sub>max</sub></button>
+        <button class="btn" id="btn-over" type="button">Dépasser (+30 %)</button>
+      </div>
+      <div class="status" id="status" role="status" aria-live="polite" data-state="ok"></div>
+      <div class="stats">
+        <div class="stat"><div class="k">Pression en (2)</div><div class="v" id="s-p2">—</div></div>
+        <div class="stat"><div class="k">Chute dans l’aiguille</div><div class="v" id="s-dp">—</div></div>
+        <div class="stat"><div class="k">Vitesse dans l’aiguille</div><div class="v" id="s-v">—</div></div>
+        <div class="stat" id="s-re-box"><div class="k">Reynolds (laminaire &lt; 2300)</div><div class="v" id="s-re">—</div></div>
+      </div>
+    </section>
+
+    <figure class="card schematic" id="sch">
+      <div class="stage" id="stage"><canvas id="cv" tabindex="0" role="img" aria-label="Seringue en 3D. Glisser pour tourner la vue, pincer ou utiliser la molette pour zoomer, tirer le piston pour changer le débit. Flèches du clavier : tourner."></canvas></div>
+      <div class="btns" style="margin-top:10px"><button class="btn" id="btn-view" type="button">Réinitialiser la vue</button></div>
+      <figcaption>Glisse pour tourner, pince ou molette pour zoomer. Tire le piston vers le haut pour augmenter le débit : le curseur suit. Schéma non à l’échelle ; la pression est la plus basse en (2), à la sortie de l’aiguille.</figcaption>
+    </figure>
+
+    <section class="card charts" aria-label="Courbes">
+      <div class="chart" id="ch1">
+        <h3>Pression en (2) selon le débit</h3>
+        <div class="sub">Elle décroît linéairement avec Q. La cavitation commence là où la courbe touche p<sub>v</sub>.</div>
+        <div class="plot"></div><div class="tip" hidden></div>
+      </div>
+      <div class="chart" id="ch2">
+        <h3>Pression le long du trajet, au débit choisi</h3>
+        <div class="sub">De la surface (1) jusqu’au point (2), en montant dans l’aiguille.</div>
+        <div class="plot"></div><div class="tip" hidden></div>
+      </div>
+    </section>
+  </div>
+
+  <details class="card params">
+    <summary>Modifier les paramètres</summary>
+    <div class="fields">
+      <label for="p-d">Densité d du liquide<input type="number" id="p-d" step="any" inputmode="decimal"></label>
+      <label for="p-mu">Viscosité μ (×10⁻⁴ N·s/m²)<input type="number" id="p-mu" step="any" inputmode="decimal"></label>
+      <label for="p-pv">Pression de vapeur p<sub>v</sub> (kPa abs)<input type="number" id="p-pv" step="any" inputmode="decimal"></label>
+      <label for="p-pa">Pression atmosphérique (kPa abs)<input type="number" id="p-pa" step="any" inputmode="decimal"></label>
+      <label for="p-H">Hauteur H (m)<input type="number" id="p-H" step="any" inputmode="decimal"></label>
+      <label for="p-L">Longueur de l’aiguille L (m)<input type="number" id="p-L" step="any" inputmode="decimal"></label>
+      <label for="p-D">Diamètre de l’aiguille D (mm)<input type="number" id="p-D" step="any" inputmode="decimal"></label>
+      <label for="p-Db">Diamètre du corps (mm)<input type="number" id="p-Db" step="any" inputmode="decimal"></label>
+      <label for="p-K">Perte singulière d’entrée K (–)<input type="number" id="p-K" step="any" min="0" inputmode="decimal"></label>
+      <label class="chk" for="p-ke"><input type="checkbox" id="p-ke"> Compter l’énergie cinétique en (2)</label>
+    </div>
+    <div class="btns"><button class="btn" id="btn-reset" type="button">Valeurs initiales</button></div>
+  </details>
+
+  <section class="card" aria-label="Calcul du débit critique">
+    <h2>Calcul du débit critique</h2>
+    <ol class="steps" id="solution"></ol>
+  </section>
+</div>
+
+<script>
+(function(){
+  var NS='http://www.w3.org/2000/svg';
+  var $=function(s){return document.querySelector(s)};
+  var DEF={d:0.96,mu:9.2,pv:12,pa:101,H:0.12,L:0.10,D:0.25,Db:10,K:0,ke:true};
+  var KEYS=['d','mu','pv','pa','H','L','D','Db','K'];
+  var P=Object.assign({},DEF);
+  var q=60;            // débit en µL/s
+  var qTop=150;        // maximum du curseur en µL/s
+  var S=null;          // grandeurs dérivées
+  var vpy=0.2;         // vitesse des particules (unités 3D/s)
+  var dirty=true;      // la scène 3D doit être redessinée
+  var view={state:'ok',p1txt:'',p2txt:'',Htxt:'',Dbtxt:'',Dtxt:''};
+
+  /* ---------- formats ---------- */
+  function nf(x,d){return x.toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d})}
+  function f1(x){return x.toLocaleString('fr-FR',{maximumFractionDigits:1})}
+  function fg(x,n){return Number(x.toPrecision(n)).toLocaleString('fr-FR',{maximumFractionDigits:8})}
+  var SUP={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻'};
+  function sci(x,d){
+    if(!isFinite(x)||x===0)return '0';
+    var e=Math.floor(Math.log10(Math.abs(x))), m=x/Math.pow(10,e);
+    if(Math.abs(Number(m.toFixed(d)))>=10){m/=10;e+=1}
+    return nf(m,d)+'×10'+String(e).split('').map(function(c){return SUP[c]}).join('');
+  }
+
+  /* ---------- physique ---------- */
+  function derive(){
+    var rho=P.d*1000, g=9.81, gam=rho*g, mu=P.mu*1e-4, pv=P.pv*1e3, pa=P.pa*1e3;
+    var D=P.D*1e-3, Db=P.Db*1e-3, A=Math.PI*D*D/4, Ab=Math.PI*Db*Db/4;
+    var b=128*mu*P.L/(Math.PI*Math.pow(D,4));              // Pa par (m³/s)
+    var aKE=P.ke?0.5*rho/(Ab*Ab):0, aK=0.5*rho*P.K/(A*A), a=aKE+aK;
+    var c=gam*P.H-(pa-pv);
+    var qmax=c>=0?0:-2*c/(b+Math.sqrt(b*b-4*a*c));
+    return {rho:rho,g:g,gam:gam,mu:mu,pv:pv,pa:pa,D:D,Db:Db,A:A,Ab:Ab,b:b,aKE:aKE,aK:aK,a:a,c:c,qmax:qmax,H:P.H,L:P.L};
+  }
+  function p2of(Q){return S.pa-S.gam*S.H-S.b*Q-S.a*Q*Q}
+  function pz(z,Q){
+    var Lz=Math.min(S.L,S.H);
+    var visc=S.b*Q*Math.min(z,Lz)/Lz;
+    var kk=z>0?S.aK*Q*Q:0;
+    var ke=z>=S.H?S.aKE*Q*Q:0;
+    return S.pa-S.gam*z-visc-kk-ke;
+  }
+
+  /* ---------- graphiques ---------- */
+  function niceStep(range){
+    var raw=range/5, c=[0.5,1,2,2.5,5,10,20,25,40,50,100,200];
+    for(var i=0;i<c.length;i++){if(c[i]>=raw)return c[i]}
+    return c[c.length-1];
+  }
+  function ticks(a,b,step){var r=[];for(var v=Math.ceil(a/step-1e-9)*step;v<=b+1e-9;v+=step)r.push(+v.toFixed(6));return r}
+  function draw(host){
+    var c=host._cfg; if(!c)return;
+    var plot=host.querySelector('.plot');
+    var w=Math.max(260,Math.round(plot.clientWidth||host.clientWidth||320)), h=236;
+    var m={l:50,r:14,t:18,b:44}, iw=w-m.l-m.r, ih=h-m.t-m.b;
+    var X=function(x){return m.l+(x-c.x0)/(c.x1-c.x0)*iw};
+    var Y=function(y){return m.t+(1-(y-c.y0)/(c.y1-c.y0))*ih};
+    host._geo={m:m,iw:iw,ih:ih,w:w,h:h,X:X,Y:Y};
+    var pvk=Math.max(c.y0,Math.min(c.y1,c.pv));
+    var s='<svg viewBox="0 0 '+w+' '+h+'" role="img" aria-label="'+c.label+'">';
+    if(c.band){
+      s+='<rect class="band" x="'+X(c.band[0])+'" y="'+m.t+'" width="'+(X(c.band[1])-X(c.band[0]))+'" height="'+ih+'"/>';
+      s+='<text class="lab" x="'+(X(c.band[0])+6)+'" y="'+(m.t+13)+'">aiguille</text>';
+    }
+    var zh=Y(c.y0)-Y(pvk);
+    s+='<rect class="zone" x="'+m.l+'" y="'+Y(pvk)+'" width="'+iw+'" height="'+zh+'"/>';
+    if(zh>28)s+='<text class="lab" x="'+(m.l+8)+'" y="'+(h-m.b-8)+'">zone de cavitation</text>';
+    ticks(c.y0,c.y1,c.ys).forEach(function(v){
+      s+='<line class="gl" x1="'+m.l+'" x2="'+(m.l+iw)+'" y1="'+Y(v)+'" y2="'+Y(v)+'"/>';
+      s+='<text class="tl" x="'+(m.l-8)+'" y="'+(Y(v)+4)+'" text-anchor="end">'+nf(v,0)+'</text>';
+    });
+    s+='<line class="axis" x1="'+m.l+'" x2="'+(m.l+iw)+'" y1="'+Y(c.y0)+'" y2="'+Y(c.y0)+'"/>';
+    ticks(c.x0,c.x1,c.xs).forEach(function(v){
+      s+='<line class="axis" x1="'+X(v)+'" x2="'+X(v)+'" y1="'+Y(c.y0)+'" y2="'+(Y(c.y0)+4)+'"/>';
+      s+='<text class="tl" x="'+X(v)+'" y="'+(Y(c.y0)+17)+'" text-anchor="middle">'+f1(v)+'</text>';
+    });
+    s+='<line class="ref" x1="'+m.l+'" x2="'+(m.l+iw)+'" y1="'+Y(pvk)+'" y2="'+Y(pvk)+'"/>';
+    s+='<text class="lab" x="'+(m.l+6)+'" y="'+(Y(pvk)-6)+'">p<tspan dy="3" font-size="9">v</tspan><tspan dy="-3"> = '+f1(c.pv)+' kPa</tspan></text>';
+    if(c.vx!=null&&c.vx>=c.x0&&c.vx<=c.x1){
+      s+='<line class="ref" x1="'+X(c.vx)+'" x2="'+X(c.vx)+'" y1="'+m.t+'" y2="'+Y(c.y0)+'"/>';
+      s+='<text class="lab" x="'+(X(c.vx)+5)+'" y="'+(m.t+11)+'">Q<tspan dy="3" font-size="9">max</tspan></text>';
+    }
+    var d='';
+    for(var i=0;i<=80;i++){var x=c.x0+(c.x1-c.x0)*i/80;d+=(i?'L':'M')+X(x).toFixed(1)+' '+Y(c.f(x)).toFixed(1)}
+    s+='<path class="line" d="'+d+'"/>';
+    s+='<text class="lab" x="'+(m.l+iw/2)+'" y="'+(h-6)+'" text-anchor="middle">'+c.xl+'</text>';
+    s+='<text class="lab" transform="translate(13 '+(m.t+ih/2)+') rotate(-90)" text-anchor="middle">'+c.yl+'</text>';
+    s+='<line class="xh" y1="'+m.t+'" y2="'+Y(c.y0)+'" style="display:none"/><circle class="hd" r="4.5" style="display:none"/>';
+    c.marks.forEach(function(k){s+='<circle class="mk '+k.state+'" cx="'+X(k.x)+'" cy="'+Y(k.y)+'" r="5.5"/>'});
+    s+='</svg>';
+    plot.innerHTML=s;
+  }
+  function bindHover(host){
+    var plot=host.querySelector('.plot'), tip=host.querySelector('.tip');
+    function move(e){
+      var g=host._geo,c=host._cfg; if(!g||!c)return;
+      var r=plot.getBoundingClientRect(); if(!r.width)return;
+      var px=(e.clientX-r.left)*(g.w/r.width);
+      var x=c.x0+(px-g.m.l)/g.iw*(c.x1-c.x0); x=Math.max(c.x0,Math.min(c.x1,x));
+      var y=c.f(x);
+      var xh=plot.querySelector('.xh'), hd=plot.querySelector('.hd'); if(!xh||!hd)return;
+      xh.setAttribute('x1',g.X(x)); xh.setAttribute('x2',g.X(x)); xh.style.display='';
+      hd.setAttribute('cx',g.X(x)); hd.setAttribute('cy',g.Y(y)); hd.style.display='';
+      tip.hidden=false; tip.textContent=c.tip(x,y);
+      var sx=r.width/g.w, left=g.X(x)*sx+12;
+      if(left+tip.offsetWidth>r.width)left=g.X(x)*sx-tip.offsetWidth-12;
+      tip.style.left=Math.max(0,left)+'px';
+      tip.style.top=Math.max(0,g.Y(y)*(r.height/g.h)-34)+'px';
+    }
+    function leave(){
+      tip.hidden=true;
+      var xh=plot.querySelector('.xh'), hd=plot.querySelector('.hd');
+      if(xh)xh.style.display='none'; if(hd)hd.style.display='none';
+    }
+    plot.addEventListener('pointermove',move);
+    plot.addEventListener('pointerdown',move);
+    plot.addEventListener('pointerleave',leave);
+  }
+
+  /* ---------- mise à jour ---------- */
+  var ICONS={
+    ok:'<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    limit:'<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M6 9h12M6 15h12" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg>',
+    cav:'<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 6v8M12 18v.5" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/></svg>'
+  };
+  function update(){
+    var Q=q*1e-9, p2=p2of(Q), margin=p2-S.pv;
+    var st=margin>50?'ok':(margin>=-50?'limit':'cav');
+    var Vn=Q/S.A, Re=S.rho*Vn*S.D/S.mu, dp=S.b*Q;
+
+    $('#q-out').textContent=nf(q,1)+' µL/s';
+    $('#q-alt').textContent=nf(q*0.06,2)+' mL/min · '+sci(Q,2)+' m³/s';
+    var sl=$('#q'); sl.value=q; sl.style.setProperty('--pct',(q/qTop*100)+'%');
+
+    var stEl=$('#status'); stEl.dataset.state=st;
+    var title,desc;
+    if(st==='ok'){title='Pas de cavitation';desc='Marge de pression : p₂ − p<sub>v</sub> = '+nf(margin/1000,1)+' kPa.'}
+    else if(st==='limit'){title='Seuil de cavitation';desc='p₂ = p<sub>v</sub> : c’est le débit critique.'}
+    else{title='Cavitation';desc='La pression calculée passe sous p<sub>v</sub> ('+nf(p2/1000,1)+' kPa). En réalité elle reste à p<sub>v</sub> : le liquide se vaporise et ce calcul ne décrit plus l’écoulement.'}
+    stEl.innerHTML='<span class="ico">'+ICONS[st]+'</span><div><b>'+title+'</b><span class="d">'+desc+'</span></div>';
+
+    $('#s-p2').textContent=nf(p2/1000,1)+' kPa';
+    $('#s-dp').textContent=nf(dp/1000,1)+' kPa';
+    $('#s-v').textContent=nf(Vn,2)+' m/s';
+    $('#s-re').textContent=nf(Re,0);
+    $('#s-re-box').classList.toggle('warn',Re>=2300);
+
+    view.state=st; view.p2txt='p₂ = '+nf(p2/1000,1)+' kPa'; vpy=Math.min(Vn*0.22,0.9); dirty=true;
+
+    var y1=Math.ceil(Math.max(S.pa,S.pv)/1e3/20)*20;
+    var pvk=S.pv/1e3, mstate=st==='ok'?'':st;
+    var p2End=p2of(qTop*1e-9)/1e3;
+    var y0a=Math.min(0,Math.floor(p2End/20)*20);
+    var h1=$('#ch1');
+    h1._cfg={x0:0,x1:qTop,y0:y0a,y1:y1,xs:niceStep(qTop),ys:niceStep(y1-y0a),pv:pvk,vx:S.qmax*1e9,
+      f:function(x){return p2of(x*1e-9)/1e3},
+      marks:[{x:q,y:p2/1e3,state:mstate}],
+      xl:'Débit Q (µL/s)',yl:'p₂ (kPa abs)',label:'Pression en 2 en fonction du débit',
+      tip:function(x,y){return 'Q = '+nf(x,1)+' µL/s · p₂ = '+nf(y,1)+' kPa'}};
+    var y0b=Math.min(0,Math.floor(p2/1e3/20)*20);
+    var Lz=Math.min(S.L,S.H);
+    var h2=$('#ch2');
+    h2._cfg={x0:0,x1:S.H*100,y0:y0b,y1:y1,xs:niceStep(S.H*100),ys:niceStep(y1-y0b),pv:pvk,vx:null,band:[0,Lz*100],
+      f:function(z){return pz(z/100,Q)/1e3},
+      marks:[{x:S.H*100,y:p2/1e3,state:mstate}],
+      xl:'Hauteur au-dessus de la surface (cm)',yl:'p (kPa abs)',label:'Pression le long du trajet',
+      tip:function(x,y){return 'z = '+nf(x,1)+' cm · p = '+nf(y,1)+' kPa'}};
+    draw(h1); draw(h2);
+  }
+  function updateStatic(){
+    var big=$('#ans-big'), alt=$('#ans-alt'), facts=$('#ans-facts');
+    var Qm=S.qmax;
+    if(Qm<=0){
+      big.textContent='0';
+      alt.textContent='p_atm − p_v ≤ γ·H : la cavitation apparaît même sans écoulement.';
+    }else{
+      big.textContent=nf(Qm*1e9,1)+' µL/s';
+      alt.textContent=sci(Qm,2)+' m³/s = '+nf(Qm*1e6,4)+' mL/s = '+nf(Qm*6e7,2)+' mL/min';
+    }
+    var Vn=Qm/S.A, Re=S.rho*Vn*S.D/S.mu;
+    facts.innerHTML='<div>p₂ = p<sub>v</sub> = <b>'+f1(P.pv)+' kPa</b> (abs)</div><div>Dans l’aiguille : V = <b>'+nf(Vn,2)+' m/s</b>, Re = <b>'+nf(Re,0)+'</b></div>';
+    view.p1txt='p₁ = '+f1(P.pa)+' kPa'; view.Htxt='H = '+fg(P.H,3)+' m';
+    view.Dbtxt='Ø '+fg(P.Db,3)+' mm'; view.Dtxt='aiguille\nØ '+fg(P.D,3)+' mm · L = '+fg(P.L,3)+' m'; dirty=true;
+
+    qTop=Math.max(10,Math.ceil(1.5*Qm*1e9/10)*10);
+    var sl=$('#q'); sl.max=qTop;
+    if(q>qTop)q=qTop;
+    var tick=$('#q-tick');
+    var pct=Math.min(1,Qm*1e9/qTop);
+    tick.style.left='calc(11px + (100% - 22px) * '+pct+')';
+    tick.style.display=Qm>0?'':'none';
+  }
+  function renderSolution(){
+    var Q=S.qmax, Vn=Q/S.A, Re=S.rho*Vn*S.D/S.mu, dpA=S.b*Q, keT=S.aKE*Q*Q, kT=S.aK*Q*Q;
+    var Le=0.06*Re*S.D;
+    var h='';
+    h+='<li><h3>Où la pression est-elle minimale ?</h3><p>Entre (1) et (2), le liquide monte de H et frotte dans l’aiguille. La pression y est donc la plus basse à la sortie de l’aiguille, en (2). La cavitation commence quand p₂ = p<sub>v</sub>.</p></li>';
+    h+='<li><h3>Bernoulli généralisé entre (1) et (2)</h3><p>Régime permanent, V₁ ≈ 0 (grand bécher), p₁ = p<sub>atm</sub>.</p><div class="eq">'
+      +'p₁ − p₂ = γ·H + ½ρV₂² + Δp<sub>aig</sub>'+(P.K>0?' + K·½ρV²':'')+'\n'
+      +'γ = ρ·g = '+nf(S.rho,0)+' × 9,81 = <b>'+nf(S.gam,0)+' N/m³</b>   →   γ·H = <b>'+nf(S.gam*S.H/1000,2)+' kPa</b></div></li>';
+    h+='<li><h3>Perte dans l’aiguille (Hagen–Poiseuille)</h3><p>Écoulement laminaire dans un tube de diamètre D et de longueur L.</p><div class="eq">'
+      +'Δp<sub>aig</sub> = 128·μ·L·Q / (π·D⁴) = R·Q\n'
+      +'R = 128 × '+sci(S.mu,2)+' × '+fg(P.L,3)+' / (π × ('+sci(S.D,2)+')⁴)\n'
+      +'R = <b>'+sci(S.b,2)+' Pa·s/m³</b></div></li>';
+    var lines='p<sub>atm</sub> − p<sub>v</sub> = '+f1(P.pa)+' − '+f1(P.pv)+' = <b>'+nf((S.pa-S.pv)/1000,2)+' kPa</b>\n'
+      +'γ·H = '+nf(S.gam*S.H/1000,2)+' kPa ;   ½ρV₂² = '+nf(keT,4)+' Pa'+(S.aKE>0?' (négligeable)':' (non compté)')+'\n';
+    if(P.K>0)lines+='K·½ρV² = '+nf(kT/1000,3)+' kPa\n';
+    lines+='Δp<sub>aig</sub> = <b>'+nf(dpA/1000,2)+' kPa</b>\n'
+      +'Q<sub>max</sub> = Δp<sub>aig</sub> / R = '+nf(dpA,0)+' / '+sci(S.b,2)+'\n'
+      +'<span class="final">Q<sub>max</sub> = '+sci(Q,2)+' m³/s ≈ '+nf(Q*1e9,1)+' µL/s ≈ '+nf(Q*6e7,2)+' mL/min</span>';
+    h+='<li><h3>Débit critique : p₂ = p<sub>v</sub></h3><p>On pose p₂ = p<sub>v</sub> dans l’équation de l’étape 2 et on isole Q.</p><div class="eq">'+lines+'</div></li>';
+    var okRe=Re<2300;
+    h+='<li><h3>Vérification du régime laminaire</h3><div class="eq">'
+      +'V = Q / A = '+sci(Q,2)+' / '+sci(S.A,2)+' = <b>'+nf(Vn,2)+' m/s</b>\n'
+      +'Re = ρ·V·D / μ = <b>'+nf(Re,0)+'</b>   '+(okRe?'< 2300 → laminaire, Poiseuille est valable':'≥ 2300 → Poiseuille n’est plus valable')+'\n'
+      +'Longueur d’établissement ≈ 0,06·Re·D = '+nf(Le*1000,1)+' mm '+(Le<0.2*S.L?'≪ L : négligeable':'(à comparer à L)')+'</div></li>';
+    $('#solution').innerHTML=h;
+  }
+
+  /* ---------- seringue 3D (canvas 2D, sans bibliothèque) ---------- */
+  var stage=$('#stage'), cv=$('#cv'), ctx=cv.getContext('2d');
+  var CAM0={yaw:0.6,pitch:0.3,zoom:1}, cam={yaw:CAM0.yaw,pitch:CAM0.pitch,zoom:CAM0.zoom};
+  var W=300,Hh=360,DPR=1,base=60,D0=12,TY=1.85,SEG=28;
+  var HMIN=2.35,HMAX=3.3,hyDisp=HMIN,dragging=false,visible=true;
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var COL={};
+  function hexRgb(t){
+    t=t.trim();
+    if(t.charAt(0)==='#'){
+      if(t.length===4)t='#'+t[1]+t[1]+t[2]+t[2]+t[3]+t[3];
+      return [parseInt(t.substr(1,2),16),parseInt(t.substr(3,2),16),parseInt(t.substr(5,2),16)];
+    }
+    var m=t.match(/[\d.]+/g); return m?[+m[0],+m[1],+m[2]]:[128,128,128];
+  }
+  function readColors(){
+    var cs=getComputedStyle(document.documentElement);
+    ['liquid','accent','ink','ink2','surface','bg','ok','warn','crit'].forEach(function(n){COL[n]=hexRgb(cs.getPropertyValue('--'+n))});
+    dirty=true;
+  }
+
+  /* géométrie (unités : 1 = 100 px du schéma d’origine ; surface libre à y = 0) */
+  function cylQ(rx,rz,y0,y1,seg,parts){
+    var out=[];
+    for(var i=0;i<seg;i++){
+      var a0=i/seg*2*Math.PI,a1=(i+1)/seg*2*Math.PI;
+      var x0=rx*Math.sin(a0),z0=rz*Math.cos(a0),x1=rx*Math.sin(a1),z1=rz*Math.cos(a1);
+      for(var k=0;k<parts;k++){
+        var ya=y0+(y1-y0)*k/parts, yb=y0+(y1-y0)*(k+1)/parts;
+        out.push([[x0,ya,z0],[x1,ya,z1],[x1,yb,z1],[x0,yb,z0]]);
+      }
+    }
+    return out;
+  }
+  function discT(rx,rz,y,seg){
+    var out=[];
+    for(var i=0;i<seg;i++){
+      var a0=i/seg*2*Math.PI,a1=(i+1)/seg*2*Math.PI;
+      out.push([[0,y,0],[rx*Math.sin(a0),y,rz*Math.cos(a0)],[rx*Math.sin(a1),y,rz*Math.cos(a1)]]);
+    }
+    return out;
+  }
+  function latheQ(prof,seg){
+    var out=[];
+    for(var j=0;j<prof.length-1;j++){
+      var r0=prof[j][0],y0=prof[j][1],r1=prof[j+1][0],y1=prof[j+1][1];
+      for(var i=0;i<seg;i++){
+        var a0=i/seg*2*Math.PI,a1=(i+1)/seg*2*Math.PI;
+        out.push([[r0*Math.sin(a0),y0,r0*Math.cos(a0)],[r0*Math.sin(a1),y0,r0*Math.cos(a1)],[r1*Math.sin(a1),y1,r1*Math.cos(a1)],[r1*Math.sin(a0),y1,r1*Math.cos(a0)]]);
+      }
+    }
+    return out;
+  }
+  function addP(list,quads,cn,a,lit){quads.forEach(function(q){list.push({k:'p',pts:q,cn:cn,a:a,lit:lit,oy:0})})}
+  function addRing(list,rx,rz,y,cn,w){
+    for(var i=0;i<SEG;i++){
+      var a0=i/SEG*2*Math.PI,a1=(i+1)/SEG*2*Math.PI;
+      list.push({k:'l',pts:[[rx*Math.sin(a0),y,rz*Math.cos(a0)],[rx*Math.sin(a1),y,rz*Math.cos(a1)]],cn:cn,w:w,oy:0});
+    }
+  }
+  var BP=[[0.045,1.55],[0.06,1.56],[0.18,1.62],[0.3,1.7],[0.37,1.8],[0.4,1.9],[0.4,3.5]];
+  var STATIC=[], PLG=[], LIQ=[], lastLiqHy=-1;
+  (function(){
+    /* bécher */
+    addP(STATIC,cylQ(1.35,1.35,-0.8,0.35,SEG,1),'ink2',0.10,false);
+    addP(STATIC,discT(1.35,1.35,-0.8,SEG),'ink2',0.14,false);
+    addP(STATIC,cylQ(1.31,1.31,-0.78,0,SEG,1),'liquid',0.55,true);
+    addP(STATIC,discT(1.31,1.31,0,SEG),'liquid',0.7,true);
+    addP(STATIC,discT(1.31,1.31,-0.78,SEG),'liquid',0.6,true);
+    addRing(STATIC,1.35,1.35,0.35,'ink2',1.5);
+    addRing(STATIC,1.35,1.35,-0.8,'ink2',1.5);
+    addRing(STATIC,1.31,1.31,0,'accent',1.8);
+    /* corps de la seringue */
+    addP(STATIC,latheQ(BP,SEG),'ink2',0.13,false);
+    addRing(STATIC,0.4,0.4,3.5,'ink2',1.5);
+    addRing(STATIC,0.4,0.4,1.9,'ink2',1);
+    addP(STATIC,cylQ(0.68,0.3,3.5,3.57,SEG,1),'ink2',0.95,true);
+    addP(STATIC,discT(0.68,0.3,3.57,SEG),'ink2',0.95,true);
+    /* aiguille */
+    addP(STATIC,cylQ(0.05,0.05,-0.16,1.55,12,6),'ink2',0.5,false);
+    /* piston (coordonnées relatives à la tête, décalées par oy) */
+    addP(PLG,cylQ(0.38,0.38,0,0.14,SEG,1),'ink',1,true);
+    addP(PLG,discT(0.38,0.38,0.14,SEG),'ink',1,true);
+    addP(PLG,discT(0.38,0.38,0,SEG),'ink',1,true);
+    addP(PLG,cylQ(0.07,0.07,0.14,1.3,12,1),'ink2',1,true);
+    addP(PLG,cylQ(0.3,0.3,1.3,1.37,SEG,1),'ink2',1,true);
+    addP(PLG,discT(0.3,0.3,1.37,SEG),'ink2',1,true);
+  })();
+  function rebuildLiquid(hy){
+    LIQ=[];
+    var prof=[];
+    for(var j=0;j<BP.length;j++){
+      var p=BP[j];
+      if(p[1]<=hy){prof.push(p)}
+      else{
+        var q0=BP[j-1], t=(hy-q0[1])/(p[1]-q0[1]);
+        prof.push([q0[0]+(p[0]-q0[0])*t,hy]); break;
+      }
+    }
+    if(prof.length>1)addP(LIQ,latheQ(prof,SEG),'liquid',0.6,true);
+    lastLiqHy=hy;
+  }
+
+  /* particules et bulles */
+  var NPT=9, NB=9, ppy=[], bph=[], bx=[], bz=[];
+  (function(){
+    for(var i=0;i<NPT;i++)ppy.push(-0.12+1.6*i/NPT);
+    for(var k=0;k<NB;k++){bph.push(k/NB);var a=k*2.4;bx.push(0.2*Math.sin(a)*(0.4+0.6*((k*37)%10)/10));bz.push(0.2*Math.cos(a)*(0.4+0.6*((k*53)%10)/10))}
+  })();
+
+  /* projection */
+  var ca=1,sa=0,ce=1,se=0;
+  function setCam(){ca=Math.cos(cam.yaw);sa=Math.sin(cam.yaw);ce=Math.cos(cam.pitch);se=Math.sin(cam.pitch)}
+  function tf(x,y,z){
+    y-=TY;
+    var x1=x*ca-z*sa, z1=x*sa+z*ca;
+    var y2=y*ce+z1*se, z2=-y*se+z1*ce;
+    var s=base*cam.zoom*D0/(z2+D0);
+    return [W/2+x1*s,Hh/2-y2*s,z2,s,x1,y2];
+  }
+  function rgba(c,a,k){
+    k=k||1;
+    return 'rgba('+Math.min(255,Math.round(c[0]*k))+','+Math.min(255,Math.round(c[1]*k))+','+Math.min(255,Math.round(c[2]*k))+','+a+')';
+  }
+  function sil(list,prof,cn,w){
+    [Math.PI/2,-Math.PI/2].forEach(function(d){
+      var ph=cam.yaw+d, sn=Math.sin(ph), cs=Math.cos(ph);
+      for(var j=0;j<prof.length-1;j++){
+        list.push({k:'l',pts:[[prof[j][0]*sn,prof[j][1],prof[j][0]*cs],[prof[j+1][0]*sn,prof[j+1][1],prof[j+1][0]*cs]],cn:cn,w:w,oy:0});
+      }
+    });
+  }
+  var LX=-0.35,LY=0.65,LZ=-0.67;
+  function pill(text,x,y,anchor,col){
+    var lines=text.split('\n'), lh=15, pad=5;
+    ctx.font='11.5px "IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace';
+    var w=0; lines.forEach(function(l){w=Math.max(w,ctx.measureText(l).width)});
+    var bw=w+pad*2, bh=lines.length*lh+pad;
+    var bx0=anchor==='c'?x-bw/2:x, by0=y-bh/2;
+    bx0=Math.max(3,Math.min(W-bw-3,bx0)); by0=Math.max(3,Math.min(Hh-bh-3,by0));
+    ctx.fillStyle=rgba(COL.surface,0.88); ctx.strokeStyle=rgba(COL.ink2,0.35); ctx.lineWidth=1;
+    ctx.beginPath();
+    if(ctx.roundRect){ctx.roundRect(bx0,by0,bw,bh,5)}else{ctx.rect(bx0,by0,bw,bh)}
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle=rgba(col||COL.ink,1); ctx.textBaseline='middle'; ctx.textAlign='left';
+    lines.forEach(function(l,i){ctx.fillText(l,bx0+pad,by0+pad/2+lh*(i+0.5))});
+  }
+  function render(tsec){
+    setCam();
+    ctx.clearRect(0,0,W,Hh);
+    var hy=hyDisp;
+    if(Math.abs(hy-lastLiqHy)>1e-4)rebuildLiquid(hy);
+    PLG.forEach(function(it){it.oy=hy});
+    var items=STATIC.concat(PLG,LIQ);
+    sil(items,[[1.35,-0.8],[1.35,0.35]],'ink2',1.6);
+    sil(items,BP,'ink2',1.6);
+    sil(items,[[0.05,-0.16],[0.05,1.55]],'ink2',1.4);
+    /* particules dans l’aiguille */
+    for(var i=0;i<NPT;i++)items.push({k:'d',x:0,y:ppy[i],z:0,r:0.03,cn:'accent',a:1,oy:0});
+    /* bulles de cavitation */
+    if(view.state==='cav'){
+      for(var b=0;b<NB;b++){
+        var ph=(tsec*0.45+bph[b])%1;
+        items.push({k:'d',x:bx[b],y:1.78+ph*0.5,z:bz[b],r:0.035+0.03*((b*7)%5)/5,cn:'surface',a:0.75*(1-ph*0.7),oy:0,ring:true});
+      }
+    }
+    /* transformation */
+    for(var n=0;n<items.length;n++){
+      var it=items[n];
+      if(it.k==='d'){var p=tf(it.x,it.y+it.oy,it.z);it.sp=p;it.z2=p[2];continue}
+      var pts=it.pts,m=pts.length,sp=[],zs=0;
+      for(var j=0;j<m;j++){var q=tf(pts[j][0],pts[j][1]+it.oy,pts[j][2]);sp.push(q);zs+=q[2]}
+      it.sp=sp; it.z2=zs/m;
+    }
+    items.sort(function(a,b){return b.z2-a.z2});
+    for(n=0;n<items.length;n++){
+      it=items[n];
+      var c=COL[it.cn]; if(!c)continue;
+      if(it.k==='p'){
+        var sp2=it.sp, k=1;
+        if(it.lit){
+          var ux=sp2[1][4]-sp2[0][4],uy=sp2[1][5]-sp2[0][5],uz=sp2[1][2]-sp2[0][2];
+          var vx=sp2[2][4]-sp2[0][4],vy=sp2[2][5]-sp2[0][5],vz=sp2[2][2]-sp2[0][2];
+          var nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx,nl=Math.sqrt(nx*nx+ny*ny+nz*nz)||1;
+          k=0.62+0.55*Math.abs((nx*LX+ny*LY+nz*LZ)/nl);
+        }
+        ctx.beginPath(); ctx.moveTo(sp2[0][0],sp2[0][1]);
+        for(var j2=1;j2<sp2.length;j2++)ctx.lineTo(sp2[j2][0],sp2[j2][1]);
+        ctx.closePath();
+        ctx.fillStyle=rgba(c,it.a,k); ctx.fill();
+        if(it.a>=0.9){ctx.strokeStyle=rgba(c,1,k);ctx.lineWidth=0.7;ctx.stroke()}
+      }else if(it.k==='l'){
+        ctx.beginPath(); ctx.moveTo(it.sp[0][0],it.sp[0][1]); ctx.lineTo(it.sp[1][0],it.sp[1][1]);
+        ctx.strokeStyle=rgba(c,0.9); ctx.lineWidth=it.w; ctx.lineCap='round'; ctx.stroke();
+      }else{
+        var rp=Math.max(1.4,it.r*it.sp[3]);
+        ctx.beginPath(); ctx.arc(it.sp[0],it.sp[1],rp,0,6.2832);
+        ctx.fillStyle=rgba(c,it.a); ctx.fill();
+        if(it.ring){ctx.strokeStyle=rgba(COL.ink2,it.a);ctx.lineWidth=1;ctx.stroke()}
+      }
+    }
+    /* cote H */
+    var d1=tf(-1.75,0,0), d2=tf(-1.75,2.05,0);
+    ctx.strokeStyle=rgba(COL.ink2,1); ctx.fillStyle=rgba(COL.ink2,1); ctx.lineWidth=1.2; ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(d1[0],d1[1]); ctx.lineTo(d2[0],d2[1]); ctx.stroke();
+    var dx=d2[0]-d1[0], dy=d2[1]-d1[1], dl=Math.sqrt(dx*dx+dy*dy)||1; dx/=dl; dy/=dl;
+    [[d2,-1],[d1,1]].forEach(function(e){
+      var P0=e[0],sg=e[1];
+      ctx.beginPath(); ctx.moveTo(P0[0],P0[1]);
+      ctx.lineTo(P0[0]+sg*dx*10-dy*3.5,P0[1]+sg*dy*10+dx*3.5);
+      ctx.lineTo(P0[0]+sg*dx*10+dy*3.5,P0[1]+sg*dy*10-dx*3.5);
+      ctx.closePath(); ctx.fill();
+    });
+    ctx.setLineDash([4,4]); ctx.lineWidth=1;
+    var e1=tf(-0.42,2.05,0), e2=tf(-1.36,0,0);
+    ctx.beginPath(); ctx.moveTo(d2[0],d2[1]); ctx.lineTo(e1[0],e1[1]); ctx.moveTo(d1[0],d1[1]); ctx.lineTo(e2[0],e2[1]); ctx.stroke();
+    ctx.setLineDash([]);
+    pill(view.Htxt,(d1[0]+d2[0])/2,(d1[1]+d2[1])/2,'c');
+    /* points (1) et (2) */
+    var stc=view.state==='cav'?COL.crit:(view.state==='limit'?COL.warn:COL.accent);
+    var m2=tf(0,2.05,0), m1=tf(0.5,0,0);
+    [[m1,COL.accent],[m2,stc]].forEach(function(e){
+      ctx.beginPath(); ctx.arc(e[0][0],e[0][1],Math.max(5,0.09*e[0][3]),0,6.2832);
+      ctx.fillStyle=rgba(e[1],1); ctx.fill(); ctx.strokeStyle=rgba(COL.surface,1); ctx.lineWidth=2; ctx.stroke();
+    });
+    /* étiquettes */
+    var l2=tf(0.46,2.05,0), l1=tf(0.58,0,0), ln=tf(0.06,1.2,0), lb=tf(0.4,3.0,0), lt=tf(0.3,hy+1.37,0);
+    pill('(2)  '+view.p2txt,l2[0]+8,l2[1],'l',view.state==='cav'?COL.crit:COL.ink);
+    pill('(1)  '+view.p1txt,l1[0]+8,l1[1]+12,'l');
+    pill(view.Dtxt,ln[0]+12,ln[1],'l');
+    pill(view.Dbtxt,lb[0]+8,lb[1],'l');
+    pill('↑ tirer',lt[0]+10,lt[1]-4,'l');
+  }
+
+  /* boucle */
+  var tPrev=0;
+  function loop(t){
+    var dt=Math.min(0.05,(t-tPrev)/1000)||0; tPrev=t;
+    if(visible){
+      var tgt=HMIN+Math.max(0,Math.min(1,q/qTop))*(HMAX-HMIN);
+      if(!dragging){
+        var df=tgt-hyDisp;
+        if(Math.abs(df)>1e-4){hyDisp+=df*Math.min(1,dt*10);dirty=true}else if(df!==0){hyDisp=tgt;dirty=true}
+      }
+      if(!reduce){
+        for(var i=0;i<NPT;i++){ppy[i]+=vpy*dt;if(ppy[i]>1.5)ppy[i]-=1.62}
+        render(t/1000);
+      }else if(dirty){render(t/1000)}
+      dirty=false;
+    }
+    requestAnimationFrame(loop);
+  }
+
+  /* dimensions du canvas */
+  function resize(){
+    var r=stage.getBoundingClientRect();
+    W=Math.max(200,Math.round(r.width)); Hh=Math.max(240,Math.round(r.height));
+    DPR=Math.min(window.devicePixelRatio||1,2);
+    cv.width=Math.round(W*DPR); cv.height=Math.round(Hh*DPR);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    base=Math.min(Hh/5.9,W/4.1);
+    dirty=true;
+  }
+
+  /* interactions */
+  var ptrs={}, mode=null, lastX=0, lastY=0, pinchD=0;
+  function localXY(e){var r=cv.getBoundingClientRect();return {x:(e.clientX-r.left)*(W/r.width),y:(e.clientY-r.top)*(Hh/r.height)}}
+  function hitPlunger(x,y){
+    setCam();
+    var a=tf(0,hyDisp,0), b=tf(0,hyDisp+1.37,0);
+    var vx=b[0]-a[0], vy=b[1]-a[1], L2=vx*vx+vy*vy||1;
+    var t=Math.max(0,Math.min(1,((x-a[0])*vx+(y-a[1])*vy)/L2));
+    var px=a[0]+vx*t-x, py2=a[1]+vy*t-y;
+    return Math.sqrt(px*px+py2*py2)<=Math.max(22,0.38*a[3]);
+  }
+  function setQfromHy(){
+    var t=(hyDisp-HMIN)/(HMAX-HMIN);
+    q=Math.max(0,Math.min(1,t))*qTop; update();
+  }
+  cv.addEventListener('pointerdown',function(e){
+    try{cv.setPointerCapture(e.pointerId)}catch(_){}
+    var p=localXY(e); ptrs[e.pointerId]=p;
+    var ids=Object.keys(ptrs);
+    if(ids.length===1){
+      mode=hitPlunger(p.x,p.y)?'plunger':'orbit';
+      dragging=(mode==='plunger'); lastX=p.x; lastY=p.y;
+    }else if(ids.length===2){
+      mode='pinch'; dragging=false;
+      var a=ptrs[ids[0]], b=ptrs[ids[1]]; pinchD=Math.hypot(a.x-b.x,a.y-b.y)||1;
+    }
+    cv.focus({preventScroll:true});
+  });
+  cv.addEventListener('pointermove',function(e){
+    var p=localXY(e);
+    if(!ptrs[e.pointerId]){cv.style.cursor=hitPlunger(p.x,p.y)?'ns-resize':'grab';return}
+    ptrs[e.pointerId]=p;
+    if(mode==='orbit'){
+      cam.yaw+=(p.x-lastX)*0.008;
+      cam.pitch=Math.max(0.02,Math.min(1.0,cam.pitch+(p.y-lastY)*0.006));
+      lastX=p.x; lastY=p.y; dirty=true;
+    }else if(mode==='plunger'){
+      setCam();
+      var s=tf(0,hyDisp,0)[3];
+      hyDisp=Math.max(HMIN,Math.min(HMAX,hyDisp-(p.y-lastY)/(s*Math.max(0.5,Math.cos(cam.pitch)))));
+      lastX=p.x; lastY=p.y; setQfromHy(); dirty=true;
+    }else if(mode==='pinch'){
+      var ids=Object.keys(ptrs); if(ids.length<2)return;
+      var a=ptrs[ids[0]], b=ptrs[ids[1]], d=Math.hypot(a.x-b.x,a.y-b.y)||1;
+      cam.zoom=Math.max(0.6,Math.min(2.4,cam.zoom*d/pinchD)); pinchD=d; dirty=true;
+    }
+  });
+  function endPtr(e){
+    delete ptrs[e.pointerId];
+    var ids=Object.keys(ptrs);
+    if(ids.length===0){mode=null;dragging=false}
+    else if(ids.length===1){mode='orbit';dragging=false;lastX=ptrs[ids[0]].x;lastY=ptrs[ids[0]].y}
+  }
+  cv.addEventListener('pointerup',endPtr);
+  cv.addEventListener('pointercancel',endPtr);
+  cv.addEventListener('wheel',function(e){
+    e.preventDefault();
+    cam.zoom=Math.max(0.6,Math.min(2.4,cam.zoom*Math.exp(-e.deltaY*0.0012))); dirty=true;
+  },{passive:false});
+  cv.addEventListener('dblclick',resetView);
+  cv.addEventListener('keydown',function(e){
+    var k=e.key, used=true;
+    if(k==='ArrowLeft')cam.yaw-=0.12; else if(k==='ArrowRight')cam.yaw+=0.12;
+    else if(k==='ArrowUp')cam.pitch=Math.max(0.02,cam.pitch-0.08); else if(k==='ArrowDown')cam.pitch=Math.min(1,cam.pitch+0.08);
+    else if(k==='+'||k==='=')cam.zoom=Math.min(2.4,cam.zoom*1.1); else if(k==='-')cam.zoom=Math.max(0.6,cam.zoom/1.1);
+    else if(k==='0')resetView(); else used=false;
+    if(used){e.preventDefault();dirty=true}
+  });
+  function resetView(){cam.yaw=CAM0.yaw;cam.pitch=CAM0.pitch;cam.zoom=CAM0.zoom;dirty=true}
+  $('#btn-view').addEventListener('click',resetView);
+
+  readColors();
+  if(window.matchMedia){
+    var mq=window.matchMedia('(prefers-color-scheme: dark)');
+    if(mq.addEventListener)mq.addEventListener('change',readColors);
+  }
+  new MutationObserver(readColors).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme','class','style']});
+  if(window.ResizeObserver){new ResizeObserver(resize).observe(stage)}
+  window.addEventListener('resize',resize);
+  if(window.IntersectionObserver){new IntersectionObserver(function(en){visible=en[0].isIntersecting;if(visible)dirty=true}).observe(stage)}
+  resize();
+  requestAnimationFrame(loop);
+
+  /* ---------- paramètres et commandes ---------- */
+  function fillFields(){
+    KEYS.forEach(function(k){$('#p-'+k).value=P[k]});
+    $('#p-ke').checked=P.ke;
+  }
+  function recompute(){S=derive();updateStatic();updateAll()}
+  function updateAll(){update();renderSolution()}
+  KEYS.forEach(function(k){
+    $('#p-'+k).addEventListener('input',function(e){
+      var v=parseFloat(e.target.value), ok=isFinite(v)&&(k==='K'?v>=0:v>0);
+      e.target.setAttribute('aria-invalid',ok?'false':'true');
+      if(!ok)return;
+      P[k]=v; recompute();
+    });
+  });
+  $('#p-ke').addEventListener('change',function(e){P.ke=e.target.checked;recompute()});
+  $('#btn-reset').addEventListener('click',function(){
+    P=Object.assign({},DEF); fillFields();
+    KEYS.forEach(function(k){$('#p-'+k).setAttribute('aria-invalid','false')});
+    S=derive(); updateStatic(); q=60; if(q>qTop)q=qTop; updateAll();
+  });
+  $('#q').addEventListener('input',function(e){q=parseFloat(e.target.value)||0;update()});
+  $('#btn-crit').addEventListener('click',function(){q=S.qmax*1e9;update()});
+  $('#btn-half').addEventListener('click',function(){q=S.qmax*1e9/2;update()});
+  $('#btn-over').addEventListener('click',function(){q=Math.min(qTop,S.qmax*1e9*1.3);update()});
+
+  ['#ch1','#ch2'].forEach(function(id){
+    var h=$(id); bindHover(h);
+    if(window.ResizeObserver){new ResizeObserver(function(){draw(h)}).observe(h.querySelector('.plot'))}
+  });
+  window.addEventListener('resize',function(){draw($('#ch1'));draw($('#ch2'))});
+
+  fillFields();
+  S=derive(); updateStatic(); updateAll();
+})();
+</script>
